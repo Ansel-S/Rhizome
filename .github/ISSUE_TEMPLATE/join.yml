@@ -1,42 +1,68 @@
 name: Join Rhizome
-description: Add your site to the webring
-title: "join: yoursite.com"
+description: Request to join the Rhizome webring network
+title: "Join: [your site name]"
 labels: ["join"]
 body:
-    - type: input
-      id: name
-      attributes:
-          label: Site name
-          placeholder: "My Site"
-      validations:
-          required: true
+  - type: markdown
+    attributes:
+      value: |
+        ## Welcome!
+        Fill in the fields below. A bot will automatically validate your site
+        and add it to the network — usually within a minute.
 
-    - type: input
-      id: url
-      attributes:
-          label: URL
-          description: Must start with https://
-          placeholder: "https://yoursite.com"
-      validations:
-          required: true
+        **Before submitting**, make sure you have:
+        1. Installed the `<rhizome-spore>` widget on your site (see README)
+        2. Your site is publicly accessible over HTTPS
 
-    - type: textarea
-      id: bio
-      attributes:
-          label: Bio
-          description: One sentence, 160 chars max
-          placeholder: "What your site is about."
-      validations:
-          required: true
+  - type: input
+    id: name
+    attributes:
+      label: Site name
+      description: The display name for your site in the directory
+      placeholder: "My Personal Site"
+    validations:
+      required: true
 
-    - type: checkboxes
-      id: confirm
-      attributes:
-          label: Checklist
-          options:
-              - label: My site is publicly accessible via HTTPS
-                required: true
-              - label: I have added the Spore embed to my site
-                required: true
-              - label: My site is a developer's personal site, blog, portfolio, or project page
-                required: true
+  - type: input
+    id: url
+    attributes:
+      label: URL
+      description: Your site's homepage URL (must be HTTPS)
+      placeholder: "https://yoursite.com"
+    validations:
+      required: true
+
+  - type: textarea
+    id: bio
+    attributes:
+      label: Bio
+      description: A short description of your site (max 200 characters)
+      placeholder: "A personal blog about music, code, and long walks."
+    validations:
+      required: true
+
+  - type: input
+    id: tags
+    attributes:
+      label: Tags (optional)
+      description: Comma-separated topic tags to help people find your site
+      placeholder: "blog, music, personal, dev"
+
+  - type: input
+    id: feed
+    attributes:
+      label: RSS/Atom feed URL (optional)
+      description: If you have a feed, paste its URL here to be included in the network feed
+      placeholder: "https://yoursite.com/feed.xml"
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: My site is publicly accessible over HTTPS
+          required: true
+        - label: I have installed the `<rhizome-spore>` widget on my site
+          required: true
+        - label: I understand this is an indie web space — no commercial/spam sites
+          required: true
