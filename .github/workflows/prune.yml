@@ -2,28 +2,55 @@ name: Prune dormant nodes
 
 on:
   schedule:
-    - cron: '0 0 * * 0'
+    # Daily at 03:17 UTC — stagger to avoid GitHub Actions peak load
+    - cron: '17 3 * * *'
   workflow_dispatch:
+    inputs:
+      verify_embed:
+        description: 'Also verify spore embed is present on each site'
+        type: boolean
+        default: false
+      dry_run:
+        description: 'Report changes without writing nodes.json'
+        type: boolean
+        default: false
+      concurrency:
+        description: 'Max parallel probes'
+        default: '20'
 
 permissions:
   contents: write
 
 jobs:
   prune:
+    name: Prune
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          node-version: '20'
+          cache: 'npm'
 
-      - uses: oven-sh/setup-bun@v2
+      # Node 20 ships with fetch — no extra dependencies needed.
+      # If your scripts/ ever need npm packages, add: run: npm ci
 
-      - run: bun run scripts/prune.js
+      - name: Run pruner
+        id: prune
+        run: |
+          node scripts/prune.js \
+            --concurrency "${{ github.event.inputs.concurrency || '20' }}" \
+            ${{ github.event.inputs.verify_embed == 'true' && '--verify-embed' || '' }} \
+            ${{ github.event.inputs.dry_run     == 'true' && '--dry-run'     || '' }}
 
-      - run: |
-          git diff --quiet nodes.json && exit 0
-          git config user.name  "Rhizome Pruner"
-          git config user.email "pruner@rhizome.network"
-          git add nodes.json
-          git commit -m "prune: mark dormant nodes [$(date -u +%Y-%m-%d)]"
-          git push
+      - name: Commit updated nodes.json
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: prune dormant nodes [skip ci]'
+          file_pattern: nodes.json
+          commit_author: 'github-actions[bot] <github-actions[bot]@users.noreply.github.com>'

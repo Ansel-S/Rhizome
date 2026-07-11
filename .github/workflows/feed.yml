@@ -1,0 +1,46 @@
+name: Build aggregated feed
+
+on:
+  schedule:
+    # Every 6 hours — staggered from prune
+    - cron: '42 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      max_items:
+        description: 'Max items in output feed'
+        default: '24'
+      dry_run:
+        description: 'Print feed to log, do not commit'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  feed:
+    name: Aggregate feeds
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build feed.xml
+        run: |
+          node scripts/feed.js \
+            --max "${{ github.event.inputs.max_items || '24' }}" \
+            ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
+
+      - name: Commit feed.xml
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: update aggregated feed [skip ci]'
+          file_pattern: feed.xml
+          commit_author: 'github-actions[bot] <github-actions[bot]@users.noreply.github.com>'

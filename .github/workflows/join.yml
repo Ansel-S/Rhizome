@@ -1,0 +1,134 @@
+name: Auto-process join request
+
+on:
+  issues:
+    types: [labeled]
+
+# Only run when the "join" label is applied
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  join:
+    name: Process join request
+    runs-on: ubuntu-latest
+    if: github.event.label.name == 'join'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ── Parse issue form fields ───────────────────────────────────────────
+      - name: Parse issue body
+        id: parse
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.issue.body ?? '';
+
+            // GitHub issue forms render as:
+            //   ### Field Label
+            //
+            //   Value
+
+            function field(label) {
+              const re = new RegExp(
+                `###\\s+${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\n+([^\\n#]+)`,
+                'i'
+              );
+              return (body.match(re)?.[1] ?? '').trim().replace(/^_No response_$/, '');
+            }
+
+            const name = field('Site name');
+            const url  = field('URL');
+            const bio  = field('Bio');
+            const tags = field('Tags (optional)');
+
+            if (!name || !url || !bio) {
+              core.setFailed('Missing required fields in issue body');
+            }
+
+            core.setOutput('name', name);
+            core.setOutput('url',  url);
+            core.setOutput('bio',  bio);
+            core.setOutput('tags', tags);
+            core.info(`Parsed: name="${name}" url="${url}"`);
+
+      # ── Run join processor ────────────────────────────────────────────────
+      - name: Process join
+        id: join
+        run: |
+          node scripts/join.js \
+            --name  "${{ steps.parse.outputs.name }}" \
+            --url   "${{ steps.parse.outputs.url }}"  \
+            --bio   "${{ steps.parse.outputs.bio }}"  \
+            --tags  "${{ steps.parse.outputs.tags }}"
+        continue-on-error: true
+        # We handle the error in the "Comment" step below so the user always
+        # gets feedback even if validation fails.
+
+      # ── Commit if successful ──────────────────────────────────────────────
+      - name: Commit new node
+        if: steps.join.outcome == 'success'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "feat: add ${{ steps.parse.outputs.name }} to network [skip ci]"
+          file_pattern: nodes.json
+          commit_author: 'github-actions[bot] <github-actions[bot]@users.noreply.github.com>'
+
+      # ── Comment and close ─────────────────────────────────────────────────
+      - name: Comment on issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const success = '${{ steps.join.outcome }}' === 'success';
+            const name    = '${{ steps.parse.outputs.name }}';
+            const url     = '${{ steps.parse.outputs.url }}';
+
+            const body = success
+              ? [
+                  `## ✅ Welcome to Rhizome, **${name}**!`,
+                  ``,
+                  `Your site has been added to the network. The change will go live on the next`,
+                  `GitHub Pages build (usually within a minute).`,
+                  ``,
+                  `**What's next:**`,
+                  `- Make sure the \`<rhizome-spore>\` widget is visible on your site`,
+                  `- Your node will appear in the [Directory](../directory.html)`,
+                  `- Share your membership! 🌿`,
+                ].join('\n')
+              : [
+                  `## ❌ Join request failed`,
+                  ``,
+                  `The automated check could not add your site. Common reasons:`,
+                  `- The URL is unreachable (make sure it returns a 2xx response)`,
+                  `- The \`<rhizome-spore>\` widget was not found on the page`,
+                  `- A site with that URL is already registered`,
+                  ``,
+                  `Please fix the issue and request the \`join\` label to be re-applied,`,
+                  `or leave a comment for a manual review.`,
+                ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner:        context.repo.owner,
+              repo:         context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
+            // Close the issue on success
+            if (success) {
+              await github.rest.issues.update({
+                owner:        context.repo.owner,
+                repo:         context.repo.repo,
+                issue_number: context.issue.number,
+                state:        'closed',
+                state_reason: 'completed',
+              });
+            }
