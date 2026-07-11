@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rhizome · Directory</title>
+  <meta name="description" content="Browse all member sites in the Rhizome webring network.">
+  <link rel="stylesheet" href="assets/css/directory.css">
+</head>
+<body>
+
+<header class="site-hdr">
+  <a class="hdr-home" href="index.html">🌿 Rhizome</a>
+  <nav class="hdr-nav" aria-label="Site navigation">
+    <a href="index.html">Home</a>
+    <a href="directory.html" aria-current="page">Directory</a>
+    <a href="feed.xml" type="application/rss+xml">Feed</a>
+  </nav>
+</header>
+
+<main class="dir">
+
+  <div class="dir-head">
+    <h1 class="dir-title">Network Directory</h1>
+    <p class="dir-sub" id="dir-sub">Loading…</p>
+  </div>
+
+  <!-- ── Controls ─────────────────────────────────────────────────────────── -->
+  <div class="dir-controls">
+    <label class="search-wrap" aria-label="Search nodes">
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input
+        type="search"
+        id="search"
+        class="search-input"
+        placeholder="Search by name, bio, or tag…"
+        autocomplete="off"
+        spellcheck="false">
+    </label>
+
+    <div class="filter-row" id="tag-bar" role="group" aria-label="Filter by tag">
+      <!-- Pills injected by directory.js -->
+    </div>
+
+    <div class="sort-row">
+      <label for="sort-select" class="sort-label">Sort:</label>
+      <select id="sort-select" class="sort-select">
+        <option value="joined-desc">Newest first</option>
+        <option value="joined-asc">Oldest first</option>
+        <option value="name-asc">Name A–Z</option>
+        <option value="name-desc">Name Z–A</option>
+      </select>
+      <label class="toggle-wrap">
+        <input type="checkbox" id="hide-dormant" checked>
+        <span>Active only</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- ── Node grid ────────────────────────────────────────────────────────── -->
+  <div
+    id="grid"
+    class="dir-grid"
+    role="list"
+    aria-label="Member sites"
+    aria-live="polite"
+    aria-busy="true">
+    <!-- Cards injected by directory.js -->
+  </div>
+
+  <!-- Empty state -->
+  <p class="empty" id="empty" hidden>No nodes match your search.</p>
+
+</main>
+
+<script type="module">
+import { loadNodes, liveNodes } from './src/core.js';
+
+// ─── DOM ────────────────────────────────────────────────────────────────────
+
+const grid        = document.getElementById('grid');
+const searchInput = document.getElementById('search');
+const tagBar      = document.getElementById('tag-bar');
+const sortSel     = document.getElementById('sort-select');
+const hideDormant = document.getElementById('hide-dormant');
+const subEl       = document.getElementById('dir-sub');
+const emptyEl     = document.getElementById('empty');
+
+// ─── State ───────────────────────────────────────────────────────────────────
+
+let allNodes  = [];
+let activeTag = null;
+
+// ─── Load ─────────────────────────────────────────────────────────────────────
+
+try {
+  allNodes = await loadNodes();
+  subEl.textContent = `${liveNodes(allNodes).length} active · ${allNodes.length} total`;
+  buildTagBar();
+  render();
+} catch {
+  subEl.textContent = 'Failed to load — try refreshing.';
+} finally {
+  grid.setAttribute('aria-busy', 'false');
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+
+function render() {
+  const q        = searchInput.value.trim().toLowerCase();
+  const onlyLive = hideDormant.checked;
+  const sortKey  = sortSel.value;
+
+  let nodes = allNodes
+    .filter(n => !onlyLive || n.status !== 'dormant')
+    .filter(n => !activeTag  || n.tags?.includes(activeTag))
+    .filter(n => !q || matchSearch(n, q));
+
+  // Sort
+  nodes = nodes.slice().sort((a, b) => {
+    if (sortKey === 'name-asc')    return a.name.localeCompare(b.name);
+    if (sortKey === 'name-desc')   return b.name.localeCompare(a.name);
+    if (sortKey === 'joined-asc')  return (a.joined ?? '').localeCompare(b.joined ?? '');
+    return (b.joined ?? '').localeCompare(a.joined ?? ''); // joined-desc default
+  });
+
+  grid.innerHTML = '';
+  emptyEl.hidden = nodes.length > 0;
+
+  for (const node of nodes) {
+    grid.appendChild(makeCard(node));
+  }
+}
+
+// ─── Card ─────────────────────────────────────────────────────────────────────
+
+function makeCard(node) {
+  const dormant = node.status === 'dormant';
+  const el = document.createElement('article');
+  el.className  = `dir-card${dormant ? ' dir-card--dormant' : ''}`;
+  el.setAttribute('role', 'listitem');
+  el.innerHTML = `
+    <div class="dc-top">
+      <a class="dc-name" href="${esc(node.url)}" target="_blank" rel="noopener noreferrer">
+        ${esc(node.name)}
+        <span class="dc-ext" aria-hidden="true">↗</span>
+      </a>
+      ${dormant ? '<span class="dc-badge dc-badge--dormant">dormant</span>' : ''}
+      ${node._peer ? '<span class="dc-badge dc-badge--peer">peer</span>' : ''}
+    </div>
+    <p class="dc-bio">${esc(node.bio ?? '')}</p>
+    ${node.tags?.length ? `<div class="dc-tags" aria-label="Tags">${node.tags.map(t => `<button class="dc-tag" data-tag="${esc(t)}">${esc(t)}</button>`).join('')}</div>` : ''}
+    <div class="dc-meta">
+      <span class="dc-url">${esc(new URL(node.url).hostname)}</span>
+      ${node.joined ? `<time class="dc-joined" datetime="${esc(node.joined)}" title="Joined ${esc(node.joined)}">Joined ${formatDate(node.joined)}</time>` : ''}
+    </div>`;
+
+  // Tag pill click → filter
+  el.querySelectorAll('.dc-tag').forEach(pill => {
+    pill.addEventListener('click', () => setTag(pill.dataset.tag));
+  });
+
+  return el;
+}
+
+// ─── Tag bar ─────────────────────────────────────────────────────────────────
+
+function buildTagBar() {
+  const freq = new Map();
+  for (const n of allNodes) for (const t of (n.tags ?? [])) freq.set(t, (freq.get(t) ?? 0) + 1);
+  if (!freq.size) return;
+
+  tagBar.innerHTML = '';
+  tagBar.appendChild(makePill('All', null));
+  [...freq.entries()].sort((a, b) => b[1] - a[1])
+    .forEach(([tag, count]) => tagBar.appendChild(makePill(`${tag} (${count})`, tag)));
+}
+
+function makePill(label, tag) {
+  const btn = document.createElement('button');
+  btn.className = `tag-pill${activeTag === tag ? ' tag-pill--active' : ''}`;
+  btn.textContent = label;
+  btn.setAttribute('aria-pressed', String(activeTag === tag));
+  btn.addEventListener('click', () => setTag(tag));
+  return btn;
+}
+
+function setTag(tag) {
+  activeTag = activeTag === tag ? null : tag;
+  tagBar.querySelectorAll('.tag-pill').forEach(p => {
+    const isThis = p.textContent.startsWith(tag ?? 'All');
+    p.classList.toggle('tag-pill--active', isThis);
+    p.setAttribute('aria-pressed', String(isThis));
+  });
+  render();
+}
+
+// ─── Events ──────────────────────────────────────────────────────────────────
+
+searchInput.addEventListener('input',  render);
+sortSel.addEventListener('change',     render);
+hideDormant.addEventListener('change', render);
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function matchSearch(n, q) {
+  return n.name.toLowerCase().includes(q)
+      || (n.bio ?? '').toLowerCase().includes(q)
+      || (n.tags ?? []).some(t => t.includes(q))
+      || n.url.toLowerCase().includes(q);
+}
+
+function formatDate(iso) {
+  return new Date(iso).toLocaleDateString('en', { year: 'numeric', month: 'short' });
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+</script>
+
+</body>
+</html>

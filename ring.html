@@ -1,88 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width,initial-scale=1">
-        <meta name="rz-base" content="">
-        <title>Rhizome — Traversing</title>
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap"
-            media="print" onload="this.media='all'">
-        <link rel="stylesheet" href="assets/css/ring.css">
-    </head>
-    <body>
-    
-        <main class="scene">
-            <article class="win" aria-label="Node registry card" aria-live="polite">
-    
-                <header class="tbar">
-                    <div class="dots" aria-hidden="true">
-                        <span class="dot r"></span>
-                        <span class="dot y"></span>
-                        <span class="dot g"></span>
-                    </div>
-                    <h1 class="tbar-title">Node Registry — Rhizome Network</h1>
-                </header>
-    
-                <div class="body">
-                    <header class="rhead">
-                        <p class="rtitle">
-                            Traversal<br>
-                            <em id="dir-label">Record</em>
-                        </p>
-                        <aside class="stamp" aria-label="Registry stamp">
-                            <span>RZ-NET / <strong id="s-id">——</strong></span><br>
-                            <time id="s-time" datetime="">——</time><br>
-                            <span>ENCRYPTED</span>
-                        </aside>
-                    </header>
-    
-                    <dl class="fields">
-                        <div class="field">
-                            <dt class="fk">Node</dt>
-                            <dd class="fv serif" id="f-name">——</dd>
-                        </div>
-                        <div class="field">
-                            <dt class="fk">IPv6 Addr</dt>
-                            <dd class="fv green" id="f-ip">——</dd>
-                        </div>
-                        <div class="field">
-                            <dt class="fk">Coordinates</dt>
-                            <dd class="fv dim" id="f-coord">——</dd>
-                        </div>
-                        <div class="field">
-                            <dt class="fk">Bio</dt>
-                            <dd class="fv dim" id="f-bio">——</dd>
-                        </div>
-                        <div class="field">
-                            <dt class="fk">Endpoint</dt>
-                            <dd class="fv" style="font-size:11px" id="f-url">——</dd>
-                        </div>
-                        <div class="field">
-                            <dt class="fk">Status</dt>
-                            <dd class="fv">
-                                <span class="pill" role="status">
-                                    <span class="pdot" aria-hidden="true"></span>
-                                    <span id="f-status">ROUTING</span>
-                                </span>
-                            </dd>
-                        </div>
-                    </dl>
-    
-                    <footer class="prog" aria-label="Connection progress">
-                        <div class="plabel">
-                            <span>ESTABLISHING CHANNEL</span>
-                            <output id="pct" for="bar">0%</output>
-                        </div>
-                        <progress id="bar" class="track" max="100" value="0" aria-label="Connection progress">0%</progress>
-                    </footer>
-                </div>
-    
-            </article>
-        </main>
-    
-        <script src="assets/js/ring.js" defer></script>
-    
-    </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rhizome · Routing…</title>
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="stylesheet" href="assets/css/ring.css">
+</head>
+<body>
+
+<main>
+  <header class="hdr">
+    <span class="hdr-logo">🌿 RHIZOME</span>
+    <span class="hdr-dir" id="dir-label">Record</span>
+  </header>
+
+  <article class="win" role="status" aria-live="polite" aria-label="Routing to next node">
+
+    <!-- ── Registry card ─────────────────────────────────────────────────── -->
+    <div class="card">
+
+      <div class="card-row field">
+        <span class="field-key">NODE</span>
+        <span class="field-val" id="f-name" aria-label="Destination site name">…</span>
+        <!-- Peer badge (hidden by default) -->
+        <span class="peer-badge" id="f-peer" hidden aria-label="Federated peer node">PEER</span>
+      </div>
+
+      <div class="card-row field">
+        <span class="field-key">ADDR</span>
+        <span class="field-val mono" id="f-ip" aria-hidden="true">…</span>
+      </div>
+
+      <div class="card-row field">
+        <span class="field-key">COORD</span>
+        <span class="field-val mono" id="f-coord" aria-hidden="true">…</span>
+      </div>
+
+      <div class="card-row field">
+        <span class="field-key">URL</span>
+        <span class="field-val mono small" id="f-url">…</span>
+      </div>
+
+      <div class="card-row field">
+        <span class="field-key">BIO</span>
+        <span class="field-val" id="f-bio">…</span>
+      </div>
+
+      <!-- Tags row — hidden until populated by ring.js -->
+      <div class="card-row field" id="tags-row" hidden>
+        <span class="field-key">TAGS</span>
+        <span class="field-val" id="f-tags"></span>
+      </div>
+
+      <div class="card-row field">
+        <span class="field-key">STATUS</span>
+        <span class="field-val field-status" id="f-status">ROUTING</span>
+      </div>
+
+    </div>
+
+    <!-- ── Progress bar ──────────────────────────────────────────────────── -->
+    <div class="bar-wrap">
+      <progress id="bar" max="100" value="0" aria-label="Routing progress"></progress>
+      <span class="pct" id="pct" aria-hidden="true">0%</span>
+    </div>
+
+    <!-- ── Action row ────────────────────────────────────────────────────── -->
+    <div class="action-row">
+      <button
+        id="cancel-redirect"
+        class="btn-cancel"
+        type="button"
+        hidden
+        aria-label="Cancel automatic redirect">
+        ✕ Cancel redirect
+      </button>
+      <a
+        id="visit-link"
+        class="btn-visit"
+        href="#"
+        hidden
+        target="_blank"
+        rel="noopener noreferrer">
+        Visit site →
+      </a>
+    </div>
+
+    <!-- ── Stamp ─────────────────────────────────────────────────────────── -->
+    <footer class="stamp">
+      <span>ID: <code id="s-id">—</code></span>
+      <span><time id="s-time" datetime="">—</time></span>
+    </footer>
+
+  </article>
+</main>
+
+<script type="module" src="src/ring.js"></script>
+</body>
 </html>

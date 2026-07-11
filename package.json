@@ -1,0 +1,18 @@
+{
+  "name": "rhizome",
+  "version": "2.0.0",
+  "description": "Minimalist decentralised webring — v2",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "prune":        "node scripts/prune.js",
+    "prune:verify": "node scripts/prune.js --verify-embed",
+    "prune:dry":    "node scripts/prune.js --dry-run",
+    "join":         "node scripts/join.js",
+    "feed":         "node scripts/feed.js",
+    "feed:dry":     "node scripts/feed.js --dry-run"
+  },
+  "devDependencies": {}
+}

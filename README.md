@@ -1,120 +1,169 @@
-# 🌿 Rhizome
+# 🌿 Rhizome v2
 
-**A minimalist, decentralized webring protocol for the indie web.**
-
-Rhizome is a zero-dependency webring infrastructure built for developers who want to be found without going through a platform. It rejects the hierarchy of algorithmic feeds and centralized directories — sites connect as peers, no center, no authority, just a living network that grows one node at a time.
-
-[Live Demo](https://Ansel-S.github.io/Rhizome/) · [Join the Network](https://github.com/Ansel-S/Rhizome/issues/new?template=join.yml)
+A minimalist, decentralised webring — rebuilt for stability, scale, and extensibility.
 
 ---
 
-## ✨ Key Features
+## What's new in v2
 
-- 🌱 **Dead Simple to Join:** No account, no config file, no ID to manage. Open an issue with your name, URL, and bio — that's it.
-- 🎲 **Random Traversal:** Click *Wander* on the landing page to jump to a random node in the network.
-- 🖥️ **Node Registry Card:** Every traversal passes through a macOS-style transit page that shows a generated node fingerprint, coordinates, and IPv6 address before jumping.
-- ⚡ **Ultra-Lightweight:** The routing engine (`pulse.js`) is under 600B gzipped. No frameworks, no build step, no runtime dependencies.
-- 🔁 **Auto-Pruning:** A weekly GitHub Actions job probes every node URL. Unreachable sites are automatically marked `dormant` and excluded from traversal — and revived when they come back.
-- 🔒 **Cache-First:** Node data is cached in `localStorage` for 24 hours, so traversal works even with intermittent connectivity.
-
----
-
-## 🛠️ The Tech Stack
-
-- **Vanilla JavaScript:** Zero-dependency routing, FNV-1a URL hashing for node identity, LCG seeded RNG for deterministic fake metadata.
-- **Web Components:** The `<rhizome-spore>` embed is a self-contained Shadow DOM widget with ink-bleed hover effects and a clip-path transition overlay.
-- **CSS Custom Properties:** Playfair Display + system sans-serif typography, golden-ratio spacing, and a warm alabaster palette — all in plain CSS.
-- **GitHub Actions:** A single weekly workflow (`prune.yml`) handles node health checks and commits changes automatically.
-- **GitHub Pages:** Zero-config deployment. No build step. Push and it's live.
-
----
-
-## 🚀 Quick Start
-
-### Join as a member
-
-1. Embed the Spore widget on your site before `</body>`:
-
-```html
-<rhizome-spore
-    theme="light"
-    node-url="https://yoursite.com"
-    host="https://Ansel-S.github.io/Rhizome"
-></rhizome-spore>
-<script
-    src="https://Ansel-S.github.io/Rhizome/spore.js"
-    async></script>
-```
-
-2. [Open an issue](https://github.com/Ansel-S/Rhizome/issues/new?template=join.yml) with your site name, URL, and bio — I'll add you.
-
-| Attribute | Description |
+| Area | Change |
 |---|---|
-| `theme` | `light` or `dark` |
-| `node-url` | Your site's canonical URL |
-| `host` | The Rhizome deployment base URL |
-| `label` | Widget label (default: `🌿 Rhizome`) |
-
-### Fork your own Rhizome
-
-```bash
-# 1. Fork this repo on GitHub
-# 2. Settings → Pages → Deploy from branch → main → / (root)
-# 3. Add your nodes to nodes.json
-# 4. Update the host URL in index.html and your Spore embeds
-```
-
-Each fork is a fully independent Sub-Rhizome. The network is decentralized by design.
+| **Stability** | Shared `src/core.js` — single `loadNodes` with ETag validation, stale-while-error (72 h grace) |
+| **Stability** | Two-phase HEAD→GET probe with exponential backoff in `scripts/prune.js` |
+| **Stability** | Pruner runs **daily** instead of weekly; `--dry-run` mode for safe testing |
+| **Usability** | Cancel-redirect button on `ring.html`; "Visit site →" link after cancelling |
+| **Usability** | **`directory.html`** — searchable, filterable, sortable node directory |
+| **Usability** | Tag filtering on wander button (`index.html`) and transit page |
+| **Automation** | `join.yml` workflow — validates URL, verifies embed, commits, closes issue automatically |
+| **Features** | `<rhizome-spore>` supports `lang`, `size`, `theme`, `filter-tag` attributes |
+| **Features** | `scripts/feed.js` — aggregates member RSS/Atom feeds into `feed.xml` |
+| **Features** | Federation via `peers` option in `loadNodes` (opt-in cross-ring discovery) |
 
 ---
 
-## 📁 File Structure
+## Project structure
 
 ```
 Rhizome/
-├── index.html                  # Landing page
-├── ring.html                   # Transit page (node registry card)
-├── nodes.json                  # Node registry — name, url, bio only
-├── pulse.js                    # Routing engine (<600B gz)
-├── spore.js                    # <rhizome-spore> Web Component
-├── assets/
-│   ├── css/
-│   │   ├── index.css           # Landing page styles
-│   │   └── ring.css            # Transit page styles
-│   └── js/
-│       ├── index.js            # Wander button logic
-│       └── ring.js             # Transit page logic
+├── src/
+│   ├── core.js          # Shared browser module: uid, loadNodes, liveNodes
+│   ├── index.js         # Landing page: wander, tag bar, stats
+│   └── ring.js          # Transit page: node selection, progress, cancel
 ├── scripts/
-│   └── prune.js                # Weekly node health check (CI only)
-└── .github/
-    ├── ISSUE_TEMPLATE/
-    │   └── join.yml            # Join request form
-    └── workflows/
-        └── prune.yml           # Auto-prune every Sunday 00:00 UTC
+│   ├── lib/
+│   │   ├── semaphore.js # Async bounded-concurrency primitive
+│   │   ├── probe.js     # Two-phase HTTP health check
+│   │   └── verify.js    # Spore embed verifier
+│   ├── prune.js         # Node health check (daily CI)
+│   ├── join.js          # Auto-join processor (triggered by join.yml)
+│   └── feed.js          # RSS feed aggregator
+├── assets/css/
+│   ├── ring.css         # Transit page styles
+│   └── directory.css    # Directory page styles
+├── spore.js             # <rhizome-spore> web component (standalone IIFE)
+├── index.html           # Landing page
+├── ring.html            # Transit page
+├── directory.html       # Node directory
+├── nodes.json           # Node registry
+├── feed.xml             # Generated RSS feed (auto-committed)
+└── .github/workflows/
+    ├── prune.yml        # Daily health check
+    ├── join.yml         # Auto-process join requests
+    └── feed.yml         # 6-hourly feed aggregation
 ```
 
 ---
 
-## ⚡ Performance
+## Quick start (fork & deploy)
 
-| File | Raw | Gzipped |
-|---|---|---|
-| `pulse.js` | 1.4KB | 709B |
-| `spore.js` | 4.0KB | 1.8KB |
-| `ring.html` | 3.6KB | 1.0KB |
-| `index.html` | 5.1KB | 1.7KB |
-| Main-thread blocking | — | **0ms** |
+1. **Fork** this repository
+2. Enable **GitHub Pages** (Settings → Pages → Source: GitHub Actions or main branch `/`)
+3. Update the `host` URL in `index.html` and `ring.html` to your Pages URL
+4. Update `SELF` in `scripts/feed.js` to your feed URL
+5. Edit `nodes.json` — replace the seed node with your own site
 
 ---
 
-## 📜 License
+## Embedding the widget
 
-This project is licensed under the [MIT License](LICENSE).
+Add to any page on your member site:
+
+```html
+<rhizome-spore
+  host="https://YOUR-USERNAME.github.io/Rhizome"
+  lang="en"
+  size="default"
+  theme="auto">
+</rhizome-spore>
+<script src="https://YOUR-USERNAME.github.io/Rhizome/spore.js" defer></script>
+```
+
+### Widget attributes
+
+| Attribute | Values | Default | Description |
+|---|---|---|---|
+| `host` | URL | — | **Required.** Your Rhizome registry base URL |
+| `lang` | `en` `zh` `ja` `fr` `de` `es` | `en` | Button label language |
+| `size` | `default` `compact` `wide` | `default` | Widget size |
+| `theme` | `auto` `light` `dark` | `auto` | Color scheme |
+| `filter-tag` | any tag string | — | Only traverse nodes with this tag |
 
 ---
 
-> 🌿 The rhizome has no beginning or end; it is always in the middle, between things, interbeing, *intermezzo.* — Deleuze & Guattari
+## nodes.json schema
+
+```json
+[
+  {
+    "name":   "My Site",
+    "url":    "https://mysite.com",
+    "bio":    "A short description (max 200 chars)",
+    "tags":   ["blog", "dev"],
+    "joined": "2026-01-15",
+    "feed":   "https://mysite.com/feed.xml",
+    "status": "dormant"
+  }
+]
+```
+
+Fields `tags`, `joined`, `feed`, and `status` are all optional.
+`status: "dormant"` is set automatically by the pruner; never set it manually.
 
 ---
 
-Built with ❤️ by Ansel.
+## Scripts
+
+All scripts require **Node.js ≥ 20** (for native `fetch`). No npm install needed.
+
+```bash
+# Health check — mark unreachable nodes as dormant
+npm run prune
+
+# Health check + verify embed is still present
+npm run prune:verify
+
+# Report changes without writing nodes.json
+npm run prune:dry
+
+# Aggregate member feeds into feed.xml
+npm run feed
+
+# Preview feed without writing
+npm run feed:dry
+```
+
+---
+
+## Federation (opt-in)
+
+To cross-discover nodes from another Rhizome fork, pass `peers` to `loadNodes`:
+
+```js
+import { loadNodes } from './src/core.js';
+
+const nodes = await loadNodes({
+  peers: ['https://other-ring.github.io/Rhizome/nodes.json'],
+});
+```
+
+Peer nodes are deduplicated by URL and marked with `_peer: true` in the data.
+
+---
+
+## Joining (for site owners)
+
+Open a **Join** issue using the issue template. The bot will:
+
+1. Parse your submission fields
+2. Probe your URL for reachability (HEAD → GET, with retry)
+3. Verify `<rhizome-spore>` is present on your page
+4. Append your node to `nodes.json` and commit
+5. Close the issue with a welcome message
+
+If validation fails, the bot comments with the reason. Fix and re-apply the `join` label.
+
+---
+
+## License
+
+Zero-clause BSD. Fork freely, credit appreciated.

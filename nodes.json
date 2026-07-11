@@ -1,7 +1,10 @@
 [
     {
-        "name": "Ansel",
-        "url": "https://asong56.github.io",
-        "bio": "This site is under reconstruction now."
+        "name": "Ansel's Web",
+        "url": "https://ansel-s.github.io",
+        "bio": "The founding node. Personal site, writing, and experiments.",
+        "tags": ["personal", "writing", "dev"],
+        "joined": "2025-01-01",
+        "feed": ""
     }
 ]
