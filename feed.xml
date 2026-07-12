@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+  xmlns:atom="http://www.w3.org/2005/Atom"
+  xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>Rhizome Network</title>
+    <description>Aggregated posts from Rhizome member sites</description>
+    <link>https://ansel-s.github.io/Rhizome/</link>
+    <atom:link href="https://ansel-s.github.io/Rhizome/feed.xml" rel="self" type="application/rss+xml"/>
+    <language>en</language>
+    <lastBuildDate>Sun, 12 Jul 2026 04:17:26 GMT</lastBuildDate>
+    <generator>Rhizome Feed Builder v2</generator>
+    <ttl>720</ttl>
+
+  </channel>
+</rss>
